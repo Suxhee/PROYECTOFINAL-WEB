@@ -5,6 +5,10 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  CORS_ORIGIN: z.string().url().default('http://127.0.0.1:5173').refine((value) => {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.origin === value;
+  }, 'CORS_ORIGIN must be an HTTP(S) origin without a path.'),
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().min(1).max(65535).default(1433),
   DB_NAME: z.string().min(1),

@@ -16,7 +16,7 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', env.TRUST_PROXY);
 app.use(helmet());
-app.use(cors({ origin: false }));
+app.use(cors({ origin: env.CORS_ORIGIN }));
 app.use(express.json({ limit: '100kb' }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false }));
 

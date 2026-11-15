@@ -1,0 +1,21 @@
+{
+  "name": "origenes-sv-erp-pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build --workspace=origenes-sv-frontend",
+    "start:backend": "npm run start --workspace=origenes-sv-backend"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

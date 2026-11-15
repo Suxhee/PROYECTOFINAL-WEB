@@ -6,15 +6,17 @@ conexión SQL Server mediante Sequelize.
 ## Requisitos y ejecución
 
 Requiere Node.js 20.19+ y npm, además de una instancia SQL Server accesible.
-Desde `backend/`:
+Desde la raíz del monorepo:
 
 ```sh
 npm install
-cp .env.example .env
+cp apps/backend/.env.example apps/backend/.env
 # Edita las credenciales locales antes de iniciar
 npm run dev
 ```
 
+El comando raíz inicia backend y frontend en paralelo. Para ejecutar solo el
+backend: `npm run dev --workspace=origenes-sv-backend`.
 El servidor verifica conexión a la base de datos antes de escuchar en el puerto
 configurado. `GET /api/health` indica que el proceso responde. La estructura de
 modelos no sincroniza ni modifica el esquema automáticamente; usa migraciones
@@ -22,8 +24,8 @@ revisadas para preparar la base.
 
 ## Seguridad y despliegue
 
-Helmet, límite de solicitudes, límite de JSON y CORS deshabilitado por defecto
-están configurados. No se debe exponer el servicio directamente a Internet:
+Helmet, límite de solicitudes, límite de JSON y CORS restringido a una allowlist
+de origen (`CORS_ORIGIN`) están configurados. No se debe exponer el servicio directamente a Internet:
 usa HTTPS en Nginx, configura `TRUST_PROXY` al número real de proxies y aplica
 autenticación/autorización y permisos por sucursal antes de habilitar operaciones.
 Mantén `DB_TRUST_SERVER_CERTIFICATE=false` en producción y protege los secretos
