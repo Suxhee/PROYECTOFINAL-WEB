@@ -1,7 +1,46 @@
 import { Table } from 'reactstrap';
-export default function DataTable({ columns = [], rows = [] }) {
-  return <Table responsive striped hover>
-    <thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead>
-    <tbody>{rows.map((row, index) => <tr key={row.id ?? index}>{columns.map((column) => <td key={column.key}>{row[column.key] ?? '—'}</td>)}</tr>)}</tbody>
-  </Table>;
+
+export default function DataTable({
+  columns = [],
+  rows = [],
+  emptyMessage = 'No hay registros disponibles.'
+}) {
+  return (
+    <Table responsive striped hover>
+      <thead>
+        <tr>
+          {columns.map((column) => (
+            <th key={column.key}>
+              {column.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+
+      <tbody>
+        {rows.length === 0 ? (
+          <tr>
+            <td
+              colSpan={columns.length || 1}
+              className="text-center text-secondary py-4"
+            >
+              {emptyMessage}
+            </td>
+          </tr>
+        ) : (
+          rows.map((row, index) => (
+            <tr key={row.id ?? index}>
+              {columns.map((column) => (
+                <td key={column.key}>
+                  {column.render
+                    ? column.render(row)
+                    : row[column.key] ?? '—'}
+                </td>
+              ))}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </Table>
+  );
 }
