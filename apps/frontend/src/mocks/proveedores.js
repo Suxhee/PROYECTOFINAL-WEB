@@ -1,1 +1,38 @@
-export const proveedores = [{ id: 1, nombre: 'Proveedor de demostración', activo: true }];
+export const mockProveedores = [
+  {
+    id: 1,
+    compania: 'Distribuidora de Café',
+    nombreContacto: 'Carlos Martínez',
+    correo: 'cafe@example.com',
+    telefono: '77778888',
+    direccion: 'San Salvador',
+    activo: true,
+  },
+  {
+    id: 2,
+    compania: 'Distribuidora de Lácteos',
+    nombreContacto: 'María López',
+    correo: 'lacteos@example.com',
+    telefono: '78889999',
+    direccion: 'Santa Tecla',
+    activo: true,
+  },
+  {
+    id: 3,
+    compania: 'Distribuidora de Empaques',
+    nombreContacto: 'José Hernández',
+    correo: 'empaques@example.com',
+    telefono: '76665555',
+    direccion: 'La Libertad',
+    activo: true,
+  },
+  {
+    id: 4,
+    compania: 'Distribuidora de Pan',
+    nombreContacto: 'Ana García',
+    correo: 'pan@example.com',
+    telefono: '',
+    direccion: '',
+    activo: false,
+  },
+];
