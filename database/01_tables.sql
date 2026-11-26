@@ -14,7 +14,7 @@ CREATE TABLE sucursal
   id_sucursal INT IDENTITY(1,1) NOT NULL,
   nombre VARCHAR(50) NOT NULL,
   direccion VARCHAR(200) NULL,
-  departamento VARCHAR(20) NOT NULL,t
+  departamento VARCHAR(20) NOT NULL,
   telefono VARCHAR(20) NULL,
   correo VARCHAR(100) NOT NULL,
   activa BIT NOT NULL CONSTRAINT df_sucursal_activa DEFAULT 1,
@@ -216,7 +216,6 @@ CREATE TABLE empleado
     ON DELETE NO ACTION,
   CONSTRAINT uq_empleado_dui UNIQUE (dui),
   CONSTRAINT uq_empleado_correo UNIQUE (correo),
-  -- Formato 00000000-0 (en SQL Server no hay regex, se usa LIKE con rangos)
   CONSTRAINT ck_empleado_dui
     CHECK (dui LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9]'),
   CONSTRAINT ck_empleado_correo CHECK (correo LIKE '%@%.%')
