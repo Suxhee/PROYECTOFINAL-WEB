@@ -1,1 +1,50 @@
-export const compras = [{ id: 1, fecha: '2026-01-15', proveedor: 'Proveedor de demostración', total: 45.2 }];
+export const compras = [
+  {
+    id: 1,
+    proveedorId: 1,
+    proveedor: 'Distribuidora de Café',
+    sucursalId: 1,
+    fecha: '2026-11-20',
+    numeroFactura: 'FAC-001',
+    condicionPago: 'CONTADO',
+    fechaLimite: null,
+    estado: 'REGISTRADA',
+    subtotal: 40,
+    iva: 5.2,
+    total: 45.2,
+    pagada: true,
+    detalles: [
+      {
+        insumoId: 1,
+        cantidadPaquete: 5,
+        unidadesPaquete: 10,
+        costoPaquete: 8,
+        subtotal: 40,
+      },
+    ],
+  },
+  {
+    id: 2,
+    proveedorId: 2,
+    proveedor: 'Distribuidora de Lácteos',
+    sucursalId: 1,
+    fecha: '2026-11-25',
+    numeroFactura: 'FAC-002',
+    condicionPago: 'CREDITO',
+    fechaLimite: '2026-12-25',
+    estado: 'REGISTRADA',
+    subtotal: 100,
+    iva: 13,
+    total: 113,
+    pagada: false,
+    detalles: [
+      {
+        insumoId: 2,
+        cantidadPaquete: 10,
+        unidadesPaquete: 5,
+        costoPaquete: 10,
+        subtotal: 100,
+      },
+    ],
+  },
+];
