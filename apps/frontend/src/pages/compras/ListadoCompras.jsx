@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Badge, Row, Col } from 'reactstrap';
+import FormField from '../../components/ui/FormField.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import LoadingSpinner from '../../components/ui/LoadingSpinner.jsx';
 import AlertMessage from '../../components/ui/AlertMessage.jsx';
@@ -12,6 +14,8 @@ export default function ListadoCompras() {
   const [compras, setCompras] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [filtroProveedor, setFiltroProveedor] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
 
   useEffect(() => {
     let activo = true;
@@ -41,6 +45,31 @@ export default function ListadoCompras() {
     };
   }, []);
 
+  const proveedoresDisponibles = [
+    ...new Map(
+      compras.map((compra) => [
+        compra.proveedorId,
+        {
+          id: compra.proveedorId,
+          nombre: compra.proveedor,
+        },
+      ])
+    ).values(),
+  ];
+
+  const comprasFiltradas = compras.filter((compra) => {
+    const coincideProveedor =
+      filtroProveedor === '' ||
+      String(compra.proveedorId) === filtroProveedor;
+
+    const coincideEstado =
+      filtroEstado === '' ||
+      (filtroEstado === 'PAGADA' && compra.pagada) ||
+      (filtroEstado === 'PENDIENTE' && !compra.pagada);
+
+    return coincideProveedor && coincideEstado;
+  });
+
   const columnas = [
     {
       key: 'fecha',
@@ -60,6 +89,32 @@ export default function ListadoCompras() {
       label: 'Total',
       render: (compra) => formatearMoneda(compra.total),
     },
+    {
+      key: 'condicionPago',
+      label: 'Condición de pago',
+      render: (compra) => (
+        <Badge
+          color={
+            compra.condicionPago === 'CONTADO'
+              ? 'primary'
+              : 'info'
+          }
+        >
+          {compra.condicionPago === 'CONTADO'
+            ? 'Contado'
+            : 'Crédito'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'pagada',
+      label: 'Estado de pago',
+      render: (compra) => (
+        <Badge color={compra.pagada ? 'success' : 'warning'}>
+          {compra.pagada ? 'Pagada' : 'Pendiente de pago'}
+        </Badge>
+      ),
+    },
   ];
 
   if (cargando) {
@@ -74,10 +129,53 @@ export default function ListadoCompras() {
     <section>
       <h2 className="h4 mb-3">Historial de compras</h2>
 
+      <Row className="mb-3">
+        <Col md={6} lg={4}>
+          <FormField
+            id="filtro-proveedor"
+            label="Filtrar por proveedor"
+            type="select"
+            value={filtroProveedor}
+            onChange={(event) =>
+              setFiltroProveedor(event.target.value)
+            }
+          >
+            <option value="">Todos los proveedores</option>
+
+            {proveedoresDisponibles.map((proveedor) => (
+              <option
+                key={proveedor.id}
+                value={proveedor.id}
+              >
+                {proveedor.nombre}
+              </option>
+            ))}
+          </FormField>
+        </Col>
+
+        <Col md={6} lg={4}>
+          <FormField
+            id="filtro-estado"
+            label="Filtrar por estado de pago"
+            type="select"
+            value={filtroEstado}
+            onChange={(event) =>
+              setFiltroEstado(event.target.value)
+            }
+          >
+            <option value="">Todos los estados</option>
+            <option value="PAGADA">Pagadas</option>
+            <option value="PENDIENTE">
+              Pendientes de pago
+            </option>
+          </FormField>
+        </Col>
+      </Row>
+
       <DataTable
         columns={columnas}
-        rows={compras}
-        emptyMessage="No hay compras registradas."
+        rows={comprasFiltradas}
+        emptyMessage="No se encontraron compras."
       />
     </section>
   );

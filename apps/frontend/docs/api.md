@@ -141,3 +141,69 @@ se procesa la solicitud.
 - No se gestionan abonos parciales en esta etapa.
 - El resumen puede mostrar importes negativos durante
   la introducción de valores inválidos.
+
+  ## Historial de compras y cuentas por pagar
+
+### Historial de compras
+
+El historial utiliza el servicio listarCompras(), asociado
+al endpoint GET /purchases.
+
+La información presentada incluye:
+
+- Fecha de compra.
+- Proveedor.
+- Número de factura.
+- Total de compra.
+- Condición de pago.
+- Estado de pago.
+
+### Filtros disponibles
+
+- Proveedor.
+- Estado de pago: pagada o pendiente.
+
+Ambos filtros pueden utilizarse simultáneamente.
+
+### Cuentas por pagar
+
+Las cuentas por pagar se obtienen mediante el filtrado
+de las compras cuyo atributo pagada es false.
+
+### Reglas de negocio
+
+- Las compras al contado se consideran pagadas.
+- Las compras al crédito se consideran pendientes.
+- Las compras pagadas no forman parte de la deuda.
+- El saldo pendiente corresponde al total de la factura
+  mientras no existan abonos parciales.
+- Una factura está vencida cuando su fecha límite es
+  anterior a la fecha actual.
+- Una factura que vence el día actual todavía se
+  considera pendiente y no vencida.
+
+### Indicadores
+
+- Deuda total con proveedores.
+- Cantidad de facturas pendientes.
+- Cantidad de facturas vencidas.
+
+### Cálculos
+
+Saldo pendiente = Total de factura, si no está pagada.
+
+Deuda total = Suma de los saldos pendientes.
+
+Facturas pendientes = Cantidad de compras no pagadas.
+
+Facturas vencidas = Cantidad de compras no pagadas
+cuya fecha límite es anterior a la fecha actual.
+
+### Limitaciones actuales
+
+- Se utilizan datos simulados mediante mocks.
+- Los registros nuevos se pierden al recargar la aplicación.
+- No se gestionan abonos parciales.
+- No se registran pagos a proveedores.
+- La integración con el backend está pendiente.
+- Las reglas de vencimiento deben confirmarse con el equipo.
