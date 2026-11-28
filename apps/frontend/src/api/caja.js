@@ -1,4 +1,13 @@
+// Servicio de Caja: cada operación usa la API real o su simulación según mode.js.
+
 import { get, post } from './client.js';
-export const obtenerEstadoCaja = () => get('/cash-register/status');
-export const abrirCaja = (datos) => post('/cash-register/open', datos);
-export const cerrarCaja = (datos) => post('/cash-register/close', datos);
+import { seleccionarApi } from './mode.js';
+import { estadoCajaMock, abrirCajaMock, resumenCajaMock, cerrarCajaMock } from '../mocks/caja.js';
+// Consulta si hay un turno abierto y el último cierre disponible.
+export const obtenerEstadoCaja = seleccionarApi(() => get('/cash-register/status'), estadoCajaMock);
+// Envía el cajero responsable y el monto inicial del turno.
+export const abrirCaja = seleccionarApi(datos => post('/cash-register/open', datos), abrirCajaMock);
+// Consulta los montos esperados por cada medio de pago.
+export const obtenerResumenCaja = seleccionarApi(() => get('/cash-register/summary'), resumenCajaMock);
+// Envía los conteos y la observación para registrar el cierre.
+export const cerrarCaja = seleccionarApi(datos => post('/cash-register/close', datos), cerrarCajaMock);

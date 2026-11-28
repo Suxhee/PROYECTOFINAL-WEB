@@ -9,6 +9,7 @@ const links = [
 ];
 
 export default function Navbar() {
+  // Consulta el mismo estado compartido que usa la página de Caja.
   const caja = useCajaEstado();
   const { alertas, error: alertasError } = useAlertasStock();
   return (
@@ -25,7 +26,7 @@ export default function Navbar() {
       </Nav>
       <div className="ms-auto d-flex flex-wrap gap-3 text-white small">
         <span>
-          Caja: {caja.loading ? 'cargando' : caja.error ? 'sin conexión' : caja.data?.estado ?? 'sin datos'}
+          Caja: {caja.cargando ? 'cargando' : caja.error ? 'no disponible' : caja.abierta === true ? 'abierta' : caja.abierta === false ? 'cerrada' : 'sin datos'}
         </span>
         <span>
           Alertas de stock: {alertasError ? 'no disponibles' : alertas.length}
