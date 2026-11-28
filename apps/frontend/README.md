@@ -26,13 +26,16 @@ Las variables `VITE_*` se publican en el bundle del navegador: no guardar
 secretos en ellas. Los mocks de cada módulo se muestran solo si
 `VITE_USE_MOCK=true`. Al desactivarlo, integra los endpoints mediante `src/api/`.
 
-## Probar RRHH sin backend
+## Probar Caja y RRHH sin backend
 
-Desde la raíz, después de `npm install` y de copiar `apps/frontend/.env.example` a `apps/frontend/.env`, mantener `VITE_USE_MOCK=true` y ejecutar:
+Desde la raíz, después de `npm install` y de copiar `apps/frontend/.env.example`
+a `apps/frontend/.env`, ejecutar:
 
 ```sh
 npm run dev --workspace=origenes-sv-frontend
 npm test --workspace=origenes-sv-frontend
 ```
 
-Ejecutar las pruebas en otra terminal. Consultar `docs/caja-rrhh.md` y `docs/api.md`. El modo real necesita los endpoints del backend.
+Ejecutar el segundo comando en otra terminal. Mantener `VITE_USE_MOCK=true`
+para la demostración; el modo real todavía requiere implementar los endpoints.
+Consultar `docs/caja-rrhh.md` y `docs/api.md`.
