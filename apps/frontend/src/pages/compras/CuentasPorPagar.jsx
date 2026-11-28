@@ -8,6 +8,7 @@ import {
   formatearFecha,
   formatearMoneda,
 } from '../../utils/format.js';
+import { obtenerProximosVencimientos } from '../../utils/alertasCompras.js';
 const obtenerFechaActual = () => {
   const fecha = new Date();
   const anio = fecha.getFullYear();
@@ -77,8 +78,15 @@ const estaVencida = (compra) => {
 };
 
 const cantidadVencidas = cuentasPendientes.filter(
-  estaVencida
+  (compra) => estaVencida(compra)
 ).length;
+
+const proximosVencimientos = obtenerProximosVencimientos(
+  compras,
+  fechaActual
+);
+
+const cantidadProximosVencimientos = proximosVencimientos.length;
 
   const columnas = [
     {
@@ -180,7 +188,42 @@ const cantidadVencidas = cuentasPendientes.filter(
     </Card>
   </Col>
 </Row>
+{cantidadProximosVencimientos > 0 && (
+  <section className="mb-4" aria-label="Próximos vencimientos">
+    <h3 className="h5 mb-3">
+      Próximos vencimientos ({cantidadProximosVencimientos})
+    </h3>
 
+    {proximosVencimientos.map((compra) => (
+      <AlertMessage
+        key={compra.id}
+        color={compra.diasRestantes === 0 ? 'danger' : 'warning'}
+      >
+        <strong>
+          {compra.diasRestantes === 0
+            ? 'Factura vence hoy'
+            : `Factura vence en ${compra.diasRestantes} día(s)`}
+        </strong>
+
+        <p className="mb-1 mt-2">
+          Proveedor: {compra.proveedor}
+        </p>
+
+        <p className="mb-1">
+          Factura: {compra.numeroFactura}
+        </p>
+
+        <p className="mb-1">
+          Fecha límite: {formatearFecha(compra.fechaLimite)}
+        </p>
+
+        <p className="mb-0">
+          Saldo pendiente: {formatearMoneda(compra.total)}
+        </p>
+      </AlertMessage>
+    ))}
+  </section>
+)}
       <DataTable
         columns={columnas}
         rows={cuentasPendientes}

@@ -6,9 +6,18 @@ import AlertMessage from '../../components/ui/AlertMessage.jsx';
 import LoadingSpinner from '../../components/ui/LoadingSpinner.jsx';
 
 import { esCampoRequerido, esNumeroPositivo,} from '../../utils/validaciones.js';
-import {listarProveedores, crearCompra,} from '../../api/compras.js';
+import {
+  listarProveedores,
+  crearCompra,
+  listarCompras,
+} from '../../api/compras.js';
 import { insumos } from '../../mocks/insumos.js';
 import { formatearMoneda } from '../../utils/format.js';
+import {
+  generarAlertasStock,
+  generarSugerenciasCompra,
+  generarAlertasPrecio,
+} from '../../utils/alertasCompras.js';
 
 const obtenerFechaActual = () => {
   const fecha = new Date();
@@ -29,6 +38,9 @@ const crearDetalleVacio = (id) => ({
 const TASA_IVA = 0.13;
 export default function FacturaCompra() {
   const [proveedores, setProveedores] = useState([]);
+  const [comprasHistoricas, setComprasHistoricas] = useState([]);
+const [errorHistorial, setErrorHistorial] = useState('');
+const [cargandoHistorial, setCargandoHistorial] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [errores, setErrores] = useState([]);
@@ -78,6 +90,34 @@ const [errorRegistro, setErrorRegistro] = useState('');
       activo = false;
     };
   }, []);
+  useEffect(() => {
+  let activo = true;
+
+  const cargarHistorial = async () => {
+    try {
+      const datos = await listarCompras();
+
+      if (activo) {
+        setComprasHistoricas(datos);
+        setErrorHistorial('');
+      }
+    } catch (error) {
+      if (activo) {
+        setErrorHistorial(error.message);
+      }
+    } finally {
+      if (activo) {
+        setCargandoHistorial(false);
+      }
+    }
+  };
+
+  cargarHistorial();
+
+  return () => {
+    activo = false;
+  };
+}, []);
 
   const manejarCambio = (event) => {
     const { name, value } = event.target;
@@ -137,6 +177,18 @@ const esCredito = encabezado.condicionPago === 'CREDITO';
 const pagada = !esCredito;
 
 const saldoPendiente = esCredito ? total : 0;
+const alertasStock = [
+  ...generarAlertasStock(insumos, detalles),
+  ...generarSugerenciasCompra(insumos, detalles),
+  ...generarAlertasPrecio(
+    comprasHistoricas,
+    insumos,
+    detalles,
+    encabezado.proveedorId,
+    1,
+    encabezado.fecha
+  ),
+];
 const validarCompra = () => {
   const nuevosErrores = [];
 
@@ -266,6 +318,12 @@ const manejarEnvio = async (event) => {
     };
 
     const compraRegistrada = await crearCompra(datosCompra);
+    setComprasHistoricas((anteriores) => [
+  ...anteriores.filter(
+    (compra) => compra.id !== compraRegistrada.id
+  ),
+  compraRegistrada,
+]);
 
     setMensajeExito(
       `Compra ${compraRegistrada.numeroFactura} registrada correctamente. Total: ${formatearMoneda(compraRegistrada.total)}.`
@@ -423,7 +481,7 @@ const manejarEnvio = async (event) => {
     <tr>
       <th>Insumo</th>
       <th>Paquetes</th>
-      <th>Unidades por paquete</th>
+      <th>Cantidad por paquete (unidad del insumo)</th>
       <th>Costo por paquete</th>
       <th>Subtotal</th>
       <th>Acción</th>
@@ -537,6 +595,44 @@ const manejarEnvio = async (event) => {
     ))}
   </tbody>
 </Table>
+{cargandoHistorial && (
+  <p className="text-muted small mt-3">
+    Consultando historial de precios...
+  </p>
+)}
+
+{errorHistorial && (
+  <AlertMessage color="warning">
+    No se pudo consultar el historial de precios.
+    Las alertas de incrementos no están disponibles.
+    Puedes continuar registrando la compra.
+  </AlertMessage>
+)}
+{alertasStock.length > 0 && (
+  <section className="mt-4" aria-label="Alertas preventivas">
+    <h3 className="h5 mb-2">
+  Alertas preventivas de compra
+</h3>
+
+    <p className="text-muted small">
+      Recomendaciones para apoyar la toma de decisiones.
+      Estas advertencias no impiden registrar la compra.
+    </p>
+
+    {alertasStock.map((alerta) => (
+      <AlertMessage
+        key={alerta.id}
+        color={alerta.color}
+      >
+        <strong>{alerta.titulo}</strong>
+
+        <p className="mb-0 mt-1">
+          {alerta.mensaje}
+        </p>
+      </AlertMessage>
+    ))}
+  </section>
+)}
 <Row className="justify-content-end mt-4">
   <Col md={5} lg={4}>
     <div className="border rounded p-3 bg-light">
