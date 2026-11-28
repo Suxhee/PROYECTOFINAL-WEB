@@ -68,16 +68,54 @@ Los indicadores de caja y alertas de stock
 deberán reflejar los cambios realizados en
 los módulos correspondientes.
 
-## 6. Pendientes técnicos
+## 6. Estado de implementación y pendientes técnicos
 
-- Integración con los endpoints reales.
-- Actualización de indicadores de caja y stock.
-- Incorporación del estado de carga de alertas.
-- Mejora de la navegación en dispositivos móviles.
-- Integración de los módulos del equipo.
-- Verificación de conflictos entre ramas.
+### 6.1. Actividades completadas
+
+- Implementación de la navegación general del frontend.
+- Incorporación de indicadores de caja y alertas de stock.
+- Actualización periódica de indicadores cada 30 segundos.
+- Incorporación de estados de carga y mensajes de error.
+- Adaptación de la navegación a dispositivos móviles.
+- Centralización de las solicitudes HTTP.
+- Incorporación de una pantalla para rutas inexistentes.
+- Implementación de un componente ErrorBoundary.
+- Implementación de alertas preventivas de compras.
+- Ejecución satisfactoria de 22 pruebas automatizadas de alertas.
+- Elaboración del manual de usuario de compras y proveedores.
+- Elaboración de la documentación de arquitectura técnica.
+
+### 6.2. Actividades verificadas experimentalmente
+
+- Instalación limpia de dependencias en Windows.
+- Instalación y compilación en Linux mediante Docker.
+- Compilación de producción del frontend.
+- Distribución de archivos estáticos mediante Nginx.
+- Verificación de rutas de la SPA mediante Nginx.
+- Verificación del proxy mediante un servicio temporal de prueba.
+
+Las modificaciones experimentales de dependencias se
+realizaron en una copia independiente del repositorio.
+
+Su incorporación definitiva requiere coordinación
+y aprobación del equipo.
+
+### 6.3. Actividades pendientes
+
+- Integración con los endpoints reales del backend.
+- Actualización real del inventario mediante compras.
+- Integración de los módulos desarrollados por el equipo.
+- Verificación y resolución de conflictos entre ramas.
 - Pruebas funcionales conjuntas.
-- Verificación de instalación limpia.
+- Consolidación de las dependencias definitivas.
+- Prueba controlada del componente ErrorBoundary.
+- Verificación de autenticación y autorización.
+- Despliegue público del sistema.
+- Validación integral de la versión final.
+
+Las funcionalidades verificadas en modo de demostración
+no deben considerarse automáticamente integradas con
+el backend ni con la base de datos.
 
 ## 7. Verificaciones realizadas
 
