@@ -28,6 +28,24 @@ export function resumenCajaMock() {
   if (!cajaEstadoMock.abierta) throw new Error('No hay turno abierto.');
   return copia(cajaResumenMock);
 }
+// Acumula una venta simulada ya validada por POS en el turno vigente.
+export function registrarVentaCajaMock({ turnoId, total, metodoPago } = {}) {
+  if (!cajaEstadoMock.abierta) throw new Error('No hay turno abierto.');
+  if (turnoId !== cajaEstadoMock.caja.id) throw new Error('El turno cambió; actualiza el estado.');
+  const campos = {
+    efectivo: 'efectivoEsperado',
+    tarjeta: 'tarjetaEsperada',
+    digital: 'digitalEsperado',
+  };
+  if (!Object.hasOwn(campos, metodoPago)) throw new Error('Método de pago inválido.');
+  if (!montoValido(total) || centavos(total) <= 0) throw new Error('Total de venta inválido.');
+  const campo = campos[metodoPago];
+  // Se suma el total de la venta, no el efectivo recibido antes del cambio.
+  const acumulado = centavos(cajaResumenMock[campo]) + centavos(total);
+  if (!Number.isSafeInteger(acumulado)) throw new Error('Monto acumulado fuera de rango.');
+  cajaResumenMock[campo] = acumulado / 100;
+  return resumenCajaMock();
+}
 // Valida que el cierre corresponda al turno actual.
 export function cerrarCajaMock({ turnoId, efectivoContado, tarjetaContada, digitalContado, observacion = '' }) {
   const esperado = resumenCajaMock();
