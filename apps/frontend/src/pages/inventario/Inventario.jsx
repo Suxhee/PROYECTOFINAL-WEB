@@ -5,6 +5,7 @@ import PageHeader from '../../components/ui/PageHeader.jsx';
 import Insumos from './Insumos.jsx'
 import Productos from "./Productos.jsx";
 import RecetaEditor from "./RecetaEditor.jsx";
+import AlertasStock from './AlertasStock.jsx'
 
 export default function Inventario() {
     //Controla cual de las secciones del inventario esta visible.
@@ -44,6 +45,14 @@ export default function Inventario() {
                     >
                         Recetas
                     </Button>
+
+                    <Button 
+                        color={seccionActiva === 'alertas' ? 'primary' : 'secondary'}
+                        outline={seccionActiva !== 'alertas'}
+                        onClick={() => setSeccionActiva('alertas')}
+                    >
+                        Alertas de stock
+                    </Button>
                 </ButtonGroup>
             </div>
 
@@ -51,6 +60,7 @@ export default function Inventario() {
             {seccionActiva === 'insumos' && <Insumos />}
             {seccionActiva === 'productos' && <Productos />}
             {seccionActiva === 'recetas' && <RecetaEditor />}
+            {seccionActiva === 'alertas' && <AlertasStock />}
         </>
     );
 }

@@ -40,9 +40,14 @@ function obtenerMocks() {
   return datosIniciales;
 }
 
-// Guarda la lista actualizada de insumos en el navegador.
+// Guarda la lista actualizada de insumos en el navegador y avisa que hubo cambios.
 function guardarMocks(datos) {
   localStorage.setItem(MOCK_KEY, JSON.stringify(datos));
+
+  // Actualiza las alertas de stock sin necesidad de recargar la pagina.
+  window.dispatchEvent(
+    new Event('origenes:insumos-actuaizados')
+  );
 }
 
 // Hook que administra todas las operaciones de los insumos.
