@@ -28,7 +28,6 @@ import {
 
 import './pos.css';
 
-import { useState, useRef } from 'react';
 
 
 export default function POS() {
