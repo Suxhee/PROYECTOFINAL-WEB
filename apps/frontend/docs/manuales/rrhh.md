@@ -1,21 +1,22 @@
-# Manual: RRHH
+# Manual de usuario: Recursos Humanos y Nómina
 
-<<<<<<< Updated upstream
-1. En RRHH → Empleados, registra un empleado ficticio con DUI de formato
-   00000000-0, cargo, salario positivo y fecha de ingreso no futura.
-2. Edita los datos, busca por nombre o filtra por cargo/estado. La baja lógica
-   conserva los registros; confirma antes de dar de baja.
-3. En Generar planilla, selecciona año, mes y quincena. Confirma la generación.
-   En demo, selecciona un período completo desde la segunda quincena de mayo de 2025.
-4. Revisa salario, ISSS, AFP, renta y líquido. Abre una boleta y usa Imprimir.
-5. En Historial, consulta la misma planilla. No se permite generar dos veces
-   el mismo período en modo simulado.
+El módulo permite gestionar empleados, generar planillas quincenales y consultar boletas de pago.
 
-Pruebas: DUI duplicado, campos inválidos, baja lógica, planilla duplicada,
-boleta, historial y modificación de empleado sin alterar la planilla anterior.
-Los cálculos simulados no son válidos para pagos reales. Ver docs/caja-rrhh.md.
-=======
-Registrar y actualizar empleados, seleccionar el período de planilla y consultar
-las boletas de pago y el historial. Los cálculos de demostración no son válidos
-para pagos reales.
->>>>>>> Stashed changes
+## Gestión de empleados
+
+1. Ingresa a **Recursos Humanos y Nómina** y abre la sección **Empleados**.
+2. Registra el nombre completo, DUI, cargo, salario mensual y fecha de ingreso.
+3. Guarda el registro. Desde el listado puedes consultar y actualizar empleados, filtrar por cargo o estado y dar de baja a un empleado sin eliminar su registro.
+
+## Generación de planilla
+
+1. Abre la sección de planilla quincenal.
+2. Selecciona el año, mes y quincena correspondiente.
+3. Genera la planilla y revisa los salarios, deducciones y montos líquidos.
+4. Consulta e imprime la boleta de pago correspondiente a cada empleado.
+
+## Historial de planillas
+
+Accede al historial, selecciona el período y consulta su detalle y las boletas de pago disponibles.
+
+**Importante:** las planillas generadas en modo demostración no son válidas para realizar pagos reales.
