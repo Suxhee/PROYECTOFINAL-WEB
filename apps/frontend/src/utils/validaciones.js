@@ -353,3 +353,15 @@ export function validarCaja(caja) {
   };
 
 }
+
+// Validaciones de empleados utilizadas por RRHH.
+export const esDuiValido = (value) =>
+  /^\d{8}-\d$/.test(String(value));
+
+export const esNumeroValido = (value) =>
+  (typeof value === 'number' || typeof value === 'string') &&
+  String(value).trim() !== '' &&
+  Number.isFinite(Number(value));
+
+export const esNumeroPositivo = (value) =>
+  esNumeroValido(value) && Number(value) > 0;
