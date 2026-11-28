@@ -16,36 +16,14 @@ import {
 //Importa el formulario de registro y ediccion.
 import ProductoForm from "./ProductoForm";
 
-//Importa los datos iniciales
-import { productos as productosIniciales } from '../../mocks/productos.js';
-
-//Clave independiente para guardar los productos de demostracion.
-const MOCK_KEY = 'origenes_inventario_productos';
-
-//Recupera los productos guardados en el navegador
-function obtenerProductos() {
-  try {
-    const guardados = localStorage.getItem(MOCK_KEY);
-
-    if (guardados !== null) {
-      const datos = JSON.parse(guardados);
-
-      if (Array.isArray(datos)) {
-        return datos;
-      }
-    }
-  } catch {
-    console.error('No se pudieron recuperar los productos guardados.');
-  }
-
-  // Utiliza los datos iniciales cuando no existen los datos guardados
-   return productosIniciales;
-}
-
-// Guarda los productos actualizados en el navegador
-function guardarProductos(datos) {
-  localStorage.setItem(MOCK_KEY, JSON.stringify(datos));
-}
+// Servicios para administrar productos desde la API del módulo.
+import {
+    listarProductos,
+    crearProducto,
+    actualizarProducto,
+    eliminarProducto,
+    modoInventarioMock,
+} from '../../api/inventario.js';
 
 // Componente principal de administración de productos.
 export default function Productos() {
@@ -66,16 +44,32 @@ export default function Productos() {
   // Almacena mensajes de confirmación y errores.
   const [mensaje, setMensaje] = useState('');
 
-  // Carga los productos al entrar en la pantalla.
-  useEffect(() => {
-    try {
-      setData(obtenerProductos());
-    } catch {
-      setMensaje('No se pudieron cargar los productos.');
-    } finally {
-      setLoading(false);
+  // Consulta los productos mediante la API del módulo.
+useEffect(() => {
+    async function cargarProductos() {
+        setLoading(true);
+
+        try {
+            const resultado = await listarProductos();
+
+            if (!Array.isArray(resultado)) {
+                throw new Error(
+                    'La respuesta de productos no tiene un formato válido.'
+                );
+            }
+
+            setData(resultado);
+        } catch (error) {
+            setMensaje(
+                `No se pudieron cargar los productos: ${error.message}`
+            );
+        } finally {
+            setLoading(false);
+        }
     }
-  }, []);
+
+    cargarProductos();
+}, []);
 
   // Filtra los productos por su nombre.
   const productosFiltrados = useMemo(() => {
@@ -106,71 +100,72 @@ export default function Productos() {
     setProductoSeleccionado(null);
   };
 
-  // Registra un producto nuevo o actualiza uno existente.
+  // Registra o actualiza un producto mediante la API del módulo.
   const guardar = async (datos) => {
     setGuardando(true);
+    setMensaje('');
 
     try {
-      let nuevos;
+        if (productoSeleccionado) {
+            await actualizarProducto(
+                productoSeleccionado.id,
+                datos
+            );
+        } else {
+            await crearProducto(datos);
+        }
 
-      if (productoSeleccionado) {
-        // Reemplaza los datos del producto seleccionado.
-        nuevos = data.map((producto) =>
-          producto.id === productoSeleccionado.id
-            ? { ...datos, id: producto.id }
-            : producto
+        // Consulta nuevamente el catálogo actualizado.
+        const productosActualizados = await listarProductos();
+
+        setData(productosActualizados);
+
+        setMensaje(
+            productoSeleccionado
+                ? 'El producto se actualizó correctamente.'
+                : 'El producto se registró correctamente.'
         );
 
-        setMensaje('El producto se actualizó correctamente.');
-      } else {
-        // Genera un identificador para el producto nuevo.
-        const nuevoProducto = {
-          ...datos,
-          id: Date.now(),
-        };
+        cerrarFormulario();
+    } catch (error) {
+        setMensaje(
+            `No se pudo guardar el producto: ${error.message}`
+        );
 
-        nuevos = [...data, nuevoProducto];
-
-        setMensaje('El producto se registró correctamente.');
-      }
-
-      // Persiste los cambios y actualiza la pantalla.
-      guardarProductos(nuevos);
-      setData(nuevos);
-
-      // Cierra el formulario después de guardar.
-      cerrarFormulario();
-    } catch (err) {
-      setMensaje(`No se pudo guardar el producto: ${err.message}`);
-      throw err;
+        throw error;
     } finally {
-      setGuardando(false);
+        setGuardando(false);
     }
   };
 
-  // Elimina un producto después de solicitar confirmación.
-  const eliminarProducto = (producto) => {
+  // Solicita confirmación antes de eliminar un producto.
+const manejarEliminarProducto = async (producto) => {
     const confirmar = window.confirm(
-      `¿Deseas eliminar el producto "${producto.nombre}"?`
+        `¿Deseas eliminar el producto "${producto.nombre}"?`
     );
 
     if (!confirmar) return;
 
+    setGuardando(true);
+    setMensaje('');
+
     try {
-      // Genera una lista sin el producto seleccionado.
-      const nuevos = data.filter(
-        (item) => item.id !== producto.id
-      );
+        // Solicita la eliminación mediante la API del módulo.
+        await eliminarProducto(producto.id);
 
-      // Guarda la lista y actualiza la interfaz.
-      guardarProductos(nuevos);
-      setData(nuevos);
+        // Recupera el catálogo actualizado.
+        const productosActualizados = await listarProductos();
 
-      setMensaje('El producto se eliminó correctamente.');
-    } catch (err) {
-      setMensaje(`No se pudo eliminar el producto: ${err.message}`);
+        setData(productosActualizados);
+        setMensaje('El producto se eliminó correctamente.');
+    } catch (error) {
+        setMensaje(
+            `No se pudo eliminar el producto: ${error.message}`
+        );
+    } finally {
+        setGuardando(false);
     }
-  };
+};
 
   // Muestra un indicador mientras se cargan los datos.
   if (loading) {
@@ -193,7 +188,12 @@ export default function Productos() {
           </p>
         </div>
 
-        <Badge color="info">Modo demostración</Badge>
+        {/* Identifica el origen de los datos utilizados. */}
+        <Badge color={modoInventarioMock ? 'info' : 'primary'}>
+          {modoInventarioMock
+          ? 'Modo demostración'
+          : 'Modo API real'}
+        </Badge>
       </div>
 
       {/* Muestra los mensajes de las operaciones. */}
@@ -296,7 +296,8 @@ export default function Productos() {
                           color="danger"
                           size="sm"
                           outline
-                          onClick={() => eliminarProducto(producto)}
+                          onClick={() => manejarEliminarProducto(producto)}
+                          disabled={guardando}
                         >
                           Eliminar
                         </Button>

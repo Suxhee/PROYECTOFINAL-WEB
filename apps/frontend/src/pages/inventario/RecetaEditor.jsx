@@ -10,15 +10,16 @@ import {
     Table,
 } from 'reactstrap';
 
-import { insumos } from '../../mocks/insumos.js';
-import { productos } from '../../mocks/productos.js';
-import { recetas as recetasIniciales } from '../../mocks/recetas.js';
-
-//Clave utilizada para conservar las recetas en el navegador
-const MOCK_KEY = 'origenes_inventario_recetas';
-
-//Comprueba si el proyecto esta trabajando con datos de demostracion
-const usarMock = import.meta.env.VITE_USE_MOCK === 'true';
+// Servicios para consultar el catálogo y administrar las recetas.
+import {
+    listarInsumos,
+    listarProductos,
+    listarRecetas,
+    crearReceta,
+    actualizarReceta,
+    eliminarReceta,
+    EVENTO_INVENTARIO,
+} from '../../api/inventario.js';
 
 //Valores iniciales del formulario.
 const FORMULARIO_INICIAL = {
@@ -26,30 +27,6 @@ const FORMULARIO_INICIAL = {
     insumoId: '',
     cantidad: '',
 };
-
-// Recupera las recetas guardadas o utiliza los datos iniciales
-function obtenerRecetas() {
-    try {
-        const guardadas = localStorage.getItem(MOCK_KEY);
-
-        if (guardadas !== null) {
-            const datos = JSON.parse(guardadas);
-
-            if (Array.isArray(datos)) {
-                return datos;
-            }
-        }
-    } catch {
-        console.error('No se pudo recuperar las recetas guardadas.');
-    }
-
-    return recetasIniciales;
-}
-
-//Guarda las recetas actualizadas en el almacenamiento local.
-function guardarRecetas(datos) {
-    localStorage.setItem(MOCK_KEY, JSON.stringify(datos));
-}
 
 export default function RecetaEditor() {
     //Estado de las recetas y del formulario.
@@ -59,12 +36,85 @@ export default function RecetaEditor() {
     const [error, setError] = useState('');
     const [mensaje, setMensaje] = useState('');
     const [guardando, setGuardando] = useState(false);
+    // Almacena el catálogo actualizado de productos e insumos.
+    const [productos, setProductos] = useState([]);
+    const [insumos, setInsumos] = useState([]);
+    
+    // Controla la consulta inicial de los datos.
+    const [loading, setLoading] = useState(true);
+    const [errorCarga, setErrorCarga] = useState('');
 
-    // Carga las ecetas cuando se abre el editor.
+    // Consulta los productos, insumos y recetas desde la API.
     useEffect(() => {
-        if (usarMock) {
-            setListaRecetas(obtenerRecetas());
+    let activo = true;
+
+    async function cargarDatos() {
+        setLoading(true);
+        setErrorCarga('');
+
+        try {
+            // Realiza las tres consultas de forma simultánea.
+            const [
+                productosActuales,
+                insumosActuales,
+                recetasActuales,
+            ] = await Promise.all([
+                listarProductos(),
+                listarInsumos(),
+                listarRecetas(),
+            ]);
+
+            // Comprueba el formato de las respuestas.
+            if (
+                !Array.isArray(productosActuales) ||
+                !Array.isArray(insumosActuales) ||
+                !Array.isArray(recetasActuales)
+            ) {
+                throw new Error(
+                    'Los datos recibidos no tienen un formato válido.'
+                );
+            }
+
+            if (activo) {
+                setProductos(productosActuales);
+                setInsumos(insumosActuales);
+                setListaRecetas(recetasActuales);
+            }
+        } catch (error) {
+            if (activo) {
+                setErrorCarga(
+                    `No se pudieron cargar los datos: ${error.message}`
+                );
+            }
+        } finally {
+            if (activo) {
+                setLoading(false);
+            }
         }
+    }
+
+    cargarDatos();
+
+    // Actualiza el catálogo cuando se modifican las existencias.
+    window.addEventListener(
+        EVENTO_INVENTARIO,
+        cargarDatos
+    );
+
+    window.addEventListener('storage', cargarDatos);
+    window.addEventListener('focus', cargarDatos);
+
+    return () => {
+        activo = false;
+
+        window.removeEventListener(
+            EVENTO_INVENTARIO,
+            cargarDatos
+        );
+
+        window.removeEventListener('storage', cargarDatos);
+        window.removeEventListener('focus', cargarDatos);
+    };
     }, []);
 
     // Busca el producto correspondiente a cada ingrediente.
@@ -85,7 +135,7 @@ export default function RecetaEditor() {
                 unidad: insumo?.unit || receta.unidad || '',
             };
         });
-    }, [listaRecetas]);
+   }, [listaRecetas, productos, insumos]);
 
     // Actualiza los campos del formulario.
     function manejarCambio(evento) {
@@ -100,74 +150,93 @@ export default function RecetaEditor() {
         setMensaje('');
     }
 
-    // Guarda una nueva relación entre producto e insumo.
-    function manejarSubmit(evento) {
-        evento.preventDefault();
+    
+// Registra o actualiza un ingrediente de una receta.
+async function manejarSubmit(evento) {
+    evento.preventDefault();
 
-        setError('');
-        setMensaje('');
+    setError('');
+    setMensaje('');
 
-        // El editor requiere el modo de demostración hasta que exista
-        // un endpoint de creación y actualización de recetas.
-        if (!usarMock) {
-            setError('El backend todavía no tiene implementada la gestión de recetas.');
-            return;
-        }
+    const productoId = Number(formulario.productoId);
+    const insumoId = Number(formulario.insumoId);
+    const cantidad = Number(formulario.cantidad);
 
-        const productoId = Number(formulario.productoId);
-        const insumoId = Number(formulario.insumoId);
-        const cantidad = Number(formulario.cantidad);
+    // Comprueba que el producto y el insumo existan.
+    const productoSeleccionado = productos.find(
+        (item) => Number(item.id) === productoId
+    );
 
-        // Validaciones para evitar relaciones o cantidades incorrectas.
-        if (!productoId || !insumoId) {
-            setError('Selecciona un producto y un insumo.');
-            return;
-        }
+    const insumoSeleccionado = insumos.find(
+        (item) => Number(item.id) === insumoId
+    );
 
-        if (!Number.isFinite(cantidad) || cantidad <= 0) {
-            setError('La cantidad debe ser un número mayor que cero.');
-            return;
-        }
-
-        const insumoSeleccionado = insumos.find(
-            (item) => Number(item.id) === insumoId
-        );
-
-        if (!insumoSeleccionado) {
-            setError('El insumo seleccionado no existe.');
-            return;
-        }
-
-        setGuardando(true);
-
-        try {
-            const nuevaReceta = {
-                id: recetaEditando ?? Date.now(),
-                productoId,
-                insumoId,
-                cantidad,
-                unidad: insumoSeleccionado.unit,
-            };
-
-            // Si estamos editando, reemplazamos el ingrediente seleccionado.
-            // Si es nuevo, lo agregamos a la lista.
-            const nuevasRecetas = recetaEditando !== null
-                ? listaRecetas.map((receta) =>
-                    receta.id === recetaEditando ? nuevaReceta : receta
-                )
-                : [...listaRecetas, nuevaReceta];
-
-            guardarRecetas(nuevasRecetas);
-            setListaRecetas(nuevasRecetas);
-            setFormulario(FORMULARIO_INICIAL);
-            setRecetaEditando(null);
-            setMensaje('El ingrediente de la receta se guardó correctamente.');
-        } catch {
-            setError('No se pudo guardar la receta en el navegador.');
-        } finally {
-            setGuardando(false);
-        }
+    if (!productoSeleccionado || !insumoSeleccionado) {
+        setError('Selecciona un producto y un insumo válidos.');
+        return;
     }
+
+    // Valida la cantidad necesaria del ingrediente.
+    if (!Number.isFinite(cantidad) || cantidad < 0.001) {
+        setError('La cantidad mínima permitida es 0.001.');
+        return;
+    }
+
+    // Evita registrar dos veces el mismo ingrediente
+    // dentro de la receta de un producto.
+    const duplicado = listaRecetas.some(
+        (receta) =>
+            Number(receta.productoId) === productoId &&
+            Number(receta.insumoId) === insumoId &&
+            Number(receta.id) !== Number(recetaEditando)
+    );
+
+    if (duplicado) {
+        setError(
+            'Este insumo ya está registrado en la receta del producto.'
+        );
+        return;
+    }
+
+    setGuardando(true);
+
+    try {
+        const datosReceta = {
+            productoId,
+            insumoId,
+            cantidad,
+            unidad: insumoSeleccionado.unit,
+        };
+
+        // Selecciona la operación según el estado del formulario.
+        if (recetaEditando !== null) {
+            await actualizarReceta(
+                recetaEditando,
+                datosReceta
+            );
+        } else {
+            await crearReceta(datosReceta);
+        }
+
+        // Consulta nuevamente las recetas registradas.
+        setListaRecetas(await listarRecetas());
+
+        setFormulario(FORMULARIO_INICIAL);
+        setRecetaEditando(null);
+
+        setMensaje(
+            'El ingrediente de la receta se guardó correctamente.'
+        );
+    } catch (error) {
+        setError(
+            `No se pudo guardar la receta: ${error.message}`
+        );
+    } finally {
+        setGuardando(false);
+    }
+}
+
+    
 
     // Carga un ingrediente existente para modificarlo.
     function editarReceta(receta) {
@@ -182,32 +251,41 @@ export default function RecetaEditor() {
         setMensaje('');
     }
 
-    // Elimina un ingrediente de una receta.
-    function eliminarReceta(id) {
-        const confirmar = window.confirm(
-            '¿Deseas eliminar este ingrediente de la receta?'
-        );
+    
+    // Elimina un ingrediente después de solicitar confirmación.
+    async function manejarEliminarReceta(id) {
+    const confirmar = window.confirm(
+        '¿Deseas eliminar este ingrediente de la receta?'
+    );
 
-        if (!confirmar) return;
+    if (!confirmar) return;
 
-        try {
-            const nuevasRecetas = listaRecetas.filter(
-                (receta) => receta.id !== id
-            );
+    setGuardando(true);
+    setError('');
+    setMensaje('');
 
-            guardarRecetas(nuevasRecetas);
-            setListaRecetas(nuevasRecetas);
+    try {
+        await eliminarReceta(id);
 
-            if (recetaEditando === id) {
-                cancelarEdicion();
-            }
+        // Recupera las recetas actualizadas.
+        setListaRecetas(await listarRecetas());
 
-            setMensaje('El ingrediente se eliminó correctamente.');
-            setError('');
-        } catch {
-            setError('No se pudo eliminar el ingrediente.');
+        if (recetaEditando === id) {
+            cancelarEdicion();
         }
+
+        setMensaje(
+            'El ingrediente se eliminó correctamente.'
+        );
+    } catch (error) {
+        setError(
+            `No se pudo eliminar el ingrediente: ${error.message}`
+        );
+    } finally {
+        setGuardando(false);
+     }
     }
+
 
     // Limpia el formulario y cancela una edición.
     function cancelarEdicion() {
@@ -217,15 +295,24 @@ export default function RecetaEditor() {
         setMensaje('');
     }
 
-    // Si el modo mock está desactivado, mostramos el estado real
-    // de integración pendiente, sin simular una conexión al backend.
-    if (!usarMock) {
+    // Muestra un indicador mientras se consultan los datos.
+    if (loading) {
         return (
-            <Alert color="warning">
-                La gestión de recetas está disponible en modo de demostración.
-                El backend todavía no cuenta con las operaciones necesarias
-                para crear, editar y eliminar recetas.
-            </Alert>
+        <div className="text-center my-4">
+            <Spinner color="primary" />
+            <p className="text-secondary mt-2">
+                Cargando datos de recetas...
+            </p>
+        </div>
+        );
+    }
+    
+    // Informa los errores de consulta sin recurrir a mocks.
+    if (errorCarga) {
+        return (
+        <Alert color="danger">
+            {errorCarga}
+        </Alert>
         );
     }
 
@@ -381,7 +468,8 @@ export default function RecetaEditor() {
                                                     <Button
                                                         color="danger"
                                                         size="sm"
-                                                        onClick={() => eliminarReceta(receta.id)}
+                                                       onClick={() => manejarEliminarReceta(receta.id)}
+                                                       disabled={guardando}
                                                     >
                                                         Eliminar
                                                     </Button>

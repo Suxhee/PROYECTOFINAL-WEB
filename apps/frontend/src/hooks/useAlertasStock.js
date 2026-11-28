@@ -1,33 +1,12 @@
+
 import { useCallback, useEffect, useState } from 'react';
-import { listarInsumos } from '../api/inventario.js';
-import { insumos as datosIniciales } from '../mocks/insumos.js';
 
-// Utiliza la misma clave de almacenamiento que el hook de insumos.
-const MOCK_KEY = 'origenes_inventario_insumos';
+import {
+    listarInsumos,
+    EVENTO_INVENTARIO,
+} from '../api/inventario.js';
 
-// Identifica si la aplicacion utiliza datos de demostracion.
-const usarMock = import.meta.env.VITE_USE_MOCK === 'true';
-
-// Recupera los insumos guardados en el navegador
-function obtenerInsumosMock() {
-  try {
-        const guardados = localStorage.getItem(MOCK_KEY);
-
-        if (guardados !== null) {
-            const datos = JSON.parse(guardados);
-
-            if (Array.isArray(datos)) {
-                return datos;
-            }
-        }
-    } catch {
-        console.error('No se pudieron recuperar los insumos para las alertas.');
-    }
-
-    return datosIniciales;
-}
-
-// Hook que calcula y mantiene actualizadas las alertas e stock.
+// Hook encargado de calcular y mantener actualizadas las alertas.
 export default function useAlertasStock() {
     const [estado, setEstado] = useState({
         loading: true,
@@ -36,7 +15,7 @@ export default function useAlertasStock() {
         error: null,
     });
 
-    // Consulta los insumos y determina cuáles necesitan reposición.
+    // Consulta las existencias y determina cuáles requieren reposición.
     const cargarAlertas = useCallback(async () => {
         setEstado((actual) => ({
             ...actual,
@@ -45,16 +24,16 @@ export default function useAlertasStock() {
         }));
 
         try {
-            const insumosActuales = usarMock
-                ? obtenerInsumosMock()
-                : await listarInsumos();
+            const insumos = await listarInsumos();
 
-            if (!Array.isArray(insumosActuales)) {
-                throw new Error('La respuesta de inventario no tiene un formato válido.');
+            if (!Array.isArray(insumos)) {
+                throw new Error(
+                    'La respuesta de inventario no tiene un formato válido.'
+                );
             }
 
-            // Identifica los insumos cuyo stock está en el mínimo o por debajo.
-            const alertas = insumosActuales
+            // Identifica los insumos agotados o con stock bajo.
+            const alertas = insumos
                 .map((item) => {
                     const cantidad = Number(item.quantity);
                     const minimo = Number(item.minimumQuantity);
@@ -63,7 +42,9 @@ export default function useAlertasStock() {
                         ...item,
                         quantity: cantidad,
                         minimumQuantity: minimo,
-                        estado: cantidad <= 0 ? 'agotado' : 'bajo',
+                        estado: cantidad <= 0
+                            ? 'agotado'
+                            : 'bajo',
                     };
                 })
                 .filter((item) =>
@@ -75,7 +56,7 @@ export default function useAlertasStock() {
             setEstado({
                 loading: false,
                 alertas,
-                totalInsumos: insumosActuales.length,
+                totalInsumos: insumos.length,
                 error: null,
             });
         } catch (error) {
@@ -83,30 +64,57 @@ export default function useAlertasStock() {
                 loading: false,
                 alertas: [],
                 totalInsumos: 0,
-                error: error.message || 'No se pudieron cargar las alertas de stock.',
+                error:
+                    error.message ||
+                    'No se pudieron cargar las alertas de stock.',
             });
         }
     }, []);
 
     useEffect(() => {
-        // Carga las alertas al abrir el módulo.
+        // Consulta las alertas al montar el componente.
         cargarAlertas();
 
-        // Escucha cambios de insumos realizados desde otra sección.
         const actualizarAlertas = () => cargarAlertas();
 
-        // Detecta cambios realizados en otras pestañas del navegador.
-        window.addEventListener('storage', actualizarAlertas);
+        // Escucha las notificaciones de cambios en inventario.
+        window.addEventListener(
+            EVENTO_INVENTARIO,
+            actualizarAlertas
+        );
 
-        // Detecta cambios realizados en la misma pestaña.
-        window.addEventListener('origenes:insumos-actualizados', actualizarAlertas);
+        // Detecta cambios realizados desde otras pestañas.
+        window.addEventListener(
+            'storage',
+            actualizarAlertas
+        );
 
+        // Actualiza las alertas al regresar a la aplicación.
+        window.addEventListener(
+            'focus',
+            actualizarAlertas
+        );
+
+        // Elimina los eventos al desmontar el componente.
         return () => {
-            window.removeEventListener('storage', actualizarAlertas);
-            window.removeEventListener('origenes:insumos-actualizados', actualizarAlertas);
+            window.removeEventListener(
+                EVENTO_INVENTARIO,
+                actualizarAlertas
+            );
+
+            window.removeEventListener(
+                'storage',
+                actualizarAlertas
+            );
+
+            window.removeEventListener(
+                'focus',
+                actualizarAlertas
+            );
         };
     }, [cargarAlertas]);
 
+    // Conserva la interfaz pública del hook compartido.
     return {
         ...estado,
         recargar: cargarAlertas,
