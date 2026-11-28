@@ -144,6 +144,9 @@ CREATE TABLE compra_inventario
   subtotal DECIMAL(14,2) NOT NULL,
   iva DECIMAL(14,2) NOT NULL,
   total AS (CAST(subtotal + iva AS DECIMAL(14,2))) PERSISTED,
+  numero_factura VARCHAR(50) NULL,
+  credito BIT NOT NULL CONSTRAINT df_compra_credito DEFAULT 0,
+  justificacion NVARCHAR(500) NULL,
   id_sucursal INT NOT NULL,
   id_proveedor INT NOT NULL,
   CONSTRAINT pk_compra_inventario PRIMARY KEY (id_compra_inventario),
@@ -208,6 +211,9 @@ CREATE TABLE empleado
   fecha_ingreso DATE NULL,
   fecha_nacimiento DATE NULL,
   activo BIT NOT NULL CONSTRAINT df_empleado_activo DEFAULT 1,
+  salario_mensual DECIMAL(12,2) NULL,
+  numero_isss VARCHAR(30) NULL,
+  numero_afp VARCHAR(30) NULL,
   id_cargo INT NOT NULL,
   CONSTRAINT pk_empleado PRIMARY KEY (id_empleado),
   CONSTRAINT fk_empleado_cargo
@@ -216,9 +222,11 @@ CREATE TABLE empleado
     ON DELETE NO ACTION,
   CONSTRAINT uq_empleado_dui UNIQUE (dui),
   CONSTRAINT uq_empleado_correo UNIQUE (correo),
+  -- Formato 00000000-0 
   CONSTRAINT ck_empleado_dui
     CHECK (dui LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9]'),
-  CONSTRAINT ck_empleado_correo CHECK (correo LIKE '%@%.%')
+  CONSTRAINT ck_empleado_correo CHECK (correo LIKE '%@%.%'),
+  CONSTRAINT ck_empleado_salario CHECK (salario_mensual IS NULL OR salario_mensual > 0)
 );
 GO
 
@@ -231,9 +239,14 @@ CREATE TABLE planilla
   total_neto NUMERIC(12,2) NOT NULL,
   estado VARCHAR(20) NOT NULL,
   id_periodo INT NOT NULL,
+  sucursal_id INT NULL,
   CONSTRAINT pk_planilla PRIMARY KEY (id_planilla),
   CONSTRAINT fk_planilla_periodo
     FOREIGN KEY (id_periodo) REFERENCES periodo_pago(id_periodo)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_planilla_sucursal
+    FOREIGN KEY (sucursal_id) REFERENCES sucursal(id_sucursal)
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
   CONSTRAINT ck_planilla_bruto CHECK (total_bruto >= 0),
@@ -252,7 +265,7 @@ CREATE TABLE asignacion_sucursal
   id_asignacion INT IDENTITY(1,1) NOT NULL,
   fecha_asignacion DATE NOT NULL,
   fecha_fin DATE NULL,
-  estado BIT NOT NULL CONSTRAINT df_asignacion_suc_activa DEFAULT 1,
+  activa BIT NOT NULL CONSTRAINT df_asignacion_suc_activa DEFAULT 1,
   id_sucursal INT NOT NULL,
   id_empleado INT NOT NULL,
   CONSTRAINT pk_asignacion_sucursal PRIMARY KEY (id_asignacion),
@@ -280,6 +293,7 @@ CREATE TABLE turno_caja
   monto_esperado NUMERIC(14,2) NULL,
   monto_cierre NUMERIC(14,2) NULL,
   diferencia AS (CAST(monto_cierre - monto_esperado AS NUMERIC(14,2))) PERSISTED,
+  cierre_json NVARCHAR(2000) NULL,
   CONSTRAINT pk_turno_caja PRIMARY KEY (id_turno),
   CONSTRAINT fk_turno_empleado
     FOREIGN KEY (id_empleado) REFERENCES empleado(id_empleado)
@@ -374,7 +388,7 @@ GO
 CREATE TABLE detalle_receta
 (
   id_detalle INT IDENTITY(1,1) NOT NULL,
-  cantidad_insumo NUMERIC(10,2) NOT NULL,
+  cantidad_insumo NUMERIC(14,3) NOT NULL,
   id_receta INT NOT NULL,
   id_insumo INT NOT NULL,
   CONSTRAINT pk_detalle_receta PRIMARY KEY (id_detalle),
@@ -388,7 +402,7 @@ CREATE TABLE detalle_receta
     ON DELETE NO ACTION,
   -- Evita que el mismo insumo aparezca dos veces dentro de la misma receta.
   CONSTRAINT uq_det_receta_insumo UNIQUE (id_receta, id_insumo),
-  CONSTRAINT ck_detalle_receta_cantidad CHECK (cantidad_insumo >= 0)
+  CONSTRAINT ck_detalle_receta_cantidad CHECK (cantidad_insumo > 0)
 );
 GO
 
@@ -398,6 +412,12 @@ CREATE TABLE detalle_planilla
   salario_bruto NUMERIC(12,2) NOT NULL,
   salario_neto NUMERIC(12,2) NOT NULL,
   total_deducciones NUMERIC(12,2) NOT NULL,
+  isss DECIMAL(12,2) NULL,
+  afp DECIMAL(12,2) NULL,
+  renta DECIMAL(12,2) NULL,
+  base_gravada DECIMAL(12,2) NULL,
+  nombre_snapshot VARCHAR(150) NULL,
+  regla_version VARCHAR(60) NULL,
   id_planilla INT NOT NULL,
   id_empleado INT NOT NULL,
   CONSTRAINT pk_detalle_planilla PRIMARY KEY (id_detalle_planilla),
@@ -414,6 +434,30 @@ CREATE TABLE detalle_planilla
   CONSTRAINT ck_detalle_salario_bruto CHECK (salario_bruto >= 0),
   CONSTRAINT ck_detalle_salario_neto CHECK (salario_neto >= 0),
   CONSTRAINT ck_detalle_deducciones CHECK (total_deducciones >= 0)
+);
+GO
+
+CREATE TABLE usuario
+(
+  id_usuario INT IDENTITY(1,1) NOT NULL,
+  correo VARCHAR(150) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  rol VARCHAR(20) NOT NULL,
+  activo BIT NOT NULL CONSTRAINT df_usuario_activo DEFAULT 1,
+  id_sucursal INT NOT NULL,
+  id_empleado INT NOT NULL,
+  CONSTRAINT pk_usuario PRIMARY KEY (id_usuario),
+  CONSTRAINT fk_usuario_sucursal
+    FOREIGN KEY (id_sucursal) REFERENCES sucursal(id_sucursal)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_usuario_empleado
+    FOREIGN KEY (id_empleado) REFERENCES empleado(id_empleado)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT uq_usuario_correo UNIQUE (correo),
+  CONSTRAINT ck_usuario_rol
+    CHECK (rol IN ('ADMIN', 'GERENTE', 'CAJERO', 'BODEGA', 'COMPRAS', 'RRHH'))
 );
 GO
 
@@ -467,10 +511,20 @@ CREATE TABLE factura_pedido
   iva DECIMAL(14,2) NOT NULL,
   total AS (CAST(sub_total + iva AS DECIMAL(14,2))) PERSISTED NOT NULL,
   pagada BIT NOT NULL CONSTRAINT df_fac_pedido_pagada DEFAULT 0,
+  tipo_documento VARCHAR(3) NULL,
+  correlativo VARCHAR(30) NULL,
+  cliente_json NVARCHAR(1000) NULL,
+  clave_idempotencia VARCHAR(64) NULL,
+  solicitud_hash VARCHAR(64) NULL,
   id_pedido INT NOT NULL,
+  usuario_id INT NULL,
   CONSTRAINT pk_factura_pedido PRIMARY KEY (id_factura_pedido),
   CONSTRAINT fk_fac_pedido_pedido
     FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_fac_pedido_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id_usuario)
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
   CONSTRAINT uq_factura_pedido UNIQUE (id_pedido),
@@ -503,6 +557,98 @@ CREATE TABLE detalle_deduccion
   CONSTRAINT ck_det_ded_base CHECK (base_calculo >= 0),
   CONSTRAINT ck_det_ded_porcentaje CHECK (porcentaje BETWEEN 0 AND 100),
   CONSTRAINT ck_det_ded_monto CHECK (monto_deduccion >= 0)
+);
+GO
+
+CREATE TABLE sesion
+(
+  id_sesion INT IDENTITY(1,1) NOT NULL,
+  token_hash VARCHAR(64) NOT NULL,
+  expira DATETIME2 NOT NULL,
+  id_usuario INT NOT NULL,
+  CONSTRAINT pk_sesion PRIMARY KEY (id_sesion),
+  CONSTRAINT fk_sesion_usuario
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT uq_sesion_token UNIQUE (token_hash)
+);
+GO
+
+CREATE TABLE merma
+(
+  id_merma INT IDENTITY(1,1) NOT NULL,
+  cantidad NUMERIC(14,3) NOT NULL,
+  motivo VARCHAR(30) NOT NULL,
+  nota NVARCHAR(300) NULL,
+  fecha DATETIME2 NOT NULL,
+  id_sucursal INT NOT NULL,
+  id_insumo INT NOT NULL,
+  usuario_id INT NOT NULL,
+  CONSTRAINT pk_merma PRIMARY KEY (id_merma),
+  CONSTRAINT fk_merma_sucursal
+    FOREIGN KEY (id_sucursal) REFERENCES sucursal(id_sucursal)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_merma_insumo
+    FOREIGN KEY (id_insumo) REFERENCES insumo(id_insumo)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_merma_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id_usuario)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT ck_merma_cantidad CHECK (cantidad > 0),
+  CONSTRAINT ck_merma_motivo
+    CHECK (motivo IN ('VENCIMIENTO', 'DERRAME', 'PREPARACION', 'DANADO', 'DIFERENCIA'))
+);
+GO
+
+CREATE TABLE movimiento
+(
+  id_movimiento INT IDENTITY(1,1) NOT NULL,
+  cantidad NUMERIC(14,3) NOT NULL,
+  motivo VARCHAR(30) NOT NULL,
+  referencia VARCHAR(60) NULL,
+  fecha DATETIME2 NOT NULL,
+  id_sucursal INT NOT NULL,
+  id_insumo INT NOT NULL,
+  usuario_id INT NOT NULL,
+  CONSTRAINT pk_movimiento PRIMARY KEY (id_movimiento),
+  CONSTRAINT fk_movimiento_sucursal
+    FOREIGN KEY (id_sucursal) REFERENCES sucursal(id_sucursal)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_movimiento_insumo
+    FOREIGN KEY (id_insumo) REFERENCES insumo(id_insumo)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_movimiento_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id_usuario)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  -- Positivo = entrada de stock, negativo = salida
+  CONSTRAINT ck_movimiento_cantidad CHECK (cantidad <> 0)
+);
+GO
+
+CREATE TABLE cuadre_parcial
+(
+  id_cuadre INT IDENTITY(1,1) NOT NULL,
+  fecha DATETIME2 NOT NULL,
+  detalle_json NVARCHAR(3000) NOT NULL,
+  nota NVARCHAR(300) NULL,
+  id_turno INT NOT NULL,
+  usuario_id INT NOT NULL,
+  CONSTRAINT pk_cuadre_parcial PRIMARY KEY (id_cuadre),
+  CONSTRAINT fk_cuadre_turno
+    FOREIGN KEY (id_turno) REFERENCES turno_caja(id_turno)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
+  CONSTRAINT fk_cuadre_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id_usuario)
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
 );
 GO
 

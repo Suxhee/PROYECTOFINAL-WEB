@@ -28,6 +28,9 @@ GO
 CREATE SCHEMA nomina AUTHORIZATION dbo;
 GO
 
+CREATE SCHEMA seguridad AUTHORIZATION dbo;
+GO
+
 CREATE SCHEMA reportes AUTHORIZATION dbo;
 GO
 
@@ -43,6 +46,8 @@ ALTER SCHEMA catalogo TRANSFER dbo.detalle_receta;
 
 -- Inventario
 ALTER SCHEMA inventario TRANSFER dbo.sucursal_insumo;
+ALTER SCHEMA inventario TRANSFER dbo.merma;
+ALTER SCHEMA inventario TRANSFER dbo.movimiento;
 
 -- Compras
 ALTER SCHEMA compras TRANSFER dbo.proveedor;
@@ -60,6 +65,7 @@ ALTER SCHEMA ventas TRANSFER dbo.factura_pedido;
 ALTER SCHEMA caja TRANSFER dbo.caja;
 ALTER SCHEMA caja TRANSFER dbo.turno_caja;
 ALTER SCHEMA caja TRANSFER dbo.pago_caja;
+ALTER SCHEMA caja TRANSFER dbo.cuadre_parcial;
 
 --rrhh
 ALTER SCHEMA rrhh TRANSFER dbo.empleado;
@@ -72,6 +78,10 @@ ALTER SCHEMA nomina TRANSFER dbo.detalle_planilla;
 ALTER SCHEMA nomina TRANSFER dbo.detalle_deduccion;
 ALTER SCHEMA nomina TRANSFER dbo.configuracion_deduccion;
 ALTER SCHEMA nomina TRANSFER dbo.periodo_pago;
+
+--Seguridad
+ALTER SCHEMA seguridad TRANSFER dbo.usuario;
+ALTER SCHEMA seguridad TRANSFER dbo.sesion;
 
 --consultar esquemas existentes
 SELECT
