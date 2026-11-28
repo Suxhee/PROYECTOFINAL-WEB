@@ -230,7 +230,7 @@ CREATE TABLE empleado
 );
 GO
 
-CREATE TABLE nomina.planilla
+CREATE TABLE planilla
 (
   id_planilla INT IDENTITY(1,1) NOT NULL,
   fecha_generacion DATE NOT NULL,
@@ -242,11 +242,11 @@ CREATE TABLE nomina.planilla
   sucursal_id INT NULL,
   CONSTRAINT pk_planilla PRIMARY KEY (id_planilla),
   CONSTRAINT fk_planilla_periodo
-    FOREIGN KEY (id_periodo) REFERENCES nomina.periodo_pago(id_periodo)
+    FOREIGN KEY (id_periodo) REFERENCES periodo_pago(id_periodo)
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
   CONSTRAINT fk_planilla_sucursal
-    FOREIGN KEY (sucursal_id) REFERENCES catalogo.sucursal(id_sucursal)
+    FOREIGN KEY (sucursal_id) REFERENCES sucursal(id_sucursal)
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
   CONSTRAINT ck_planilla_bruto CHECK (total_bruto >= 0),
