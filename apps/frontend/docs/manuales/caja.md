@@ -1,5 +1,6 @@
-# Manual: Caja
+# Manual inicial: caja
 
+<<<<<<< Updated upstream
 1. Entra a Caja. Verifica que el estado coincida con Navbar.
 2. Selecciona un cajero activo y escribe el fondo inicial (por ejemplo $50).
 3. Abre el turno. Comprueba que el resumen muestre $50 de efectivo esperado y $0 en los otros medios si no hay ventas.
@@ -47,3 +48,8 @@ $60, $20 y $5 respectivamente. Cerrar y comprobar que POS no permita otro cobro.
 En modo real no se debe llamar este servicio simulado. El backend de ventas
 es responsable de validar el turno y actualizar ventas, existencias e ingresos
 de caja de manera transaccional, sin una segunda petición de ingreso desde POS.
+=======
+Seleccionar el cajero y registrar el fondo inicial. Al cerrar el turno, comparar
+los montos esperados y contados por medio de pago, registrar las diferencias
+y confirmar el cierre.
+>>>>>>> Stashed changes

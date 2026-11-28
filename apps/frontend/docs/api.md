@@ -13,6 +13,7 @@ sucursal al incorporarse. Respuestas de error previstas: `{ "message": "..." }`.
 | GET, POST | `/payroll/employees` | Consultar y registrar empleados |
 
 Este contrato es una guía de integración, no una API de producción completa.
+<<<<<<< Updated upstream
 
 ## Caja y RRHH — propuesta de contrato para revisión del equipo
 
@@ -42,3 +43,5 @@ ha inventado una sucursal por defecto. Quedan pendientes contexto de sucursal,
 autenticación, autorización de RRHH, persistencia, transacciones, validación de
 turnos y cálculo definitivo. El POS deberá volver a consultar el estado/resumen
 tras una venta registrada por el backend. No se simula una venta real.
+=======
+>>>>>>> Stashed changes

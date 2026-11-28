@@ -1,5 +1,6 @@
 # Manual: RRHH
 
+<<<<<<< Updated upstream
 1. En RRHH → Empleados, registra un empleado ficticio con DUI de formato
    00000000-0, cargo, salario positivo y fecha de ingreso no futura.
 2. Edita los datos, busca por nombre o filtra por cargo/estado. La baja lógica
@@ -13,3 +14,8 @@
 Pruebas: DUI duplicado, campos inválidos, baja lógica, planilla duplicada,
 boleta, historial y modificación de empleado sin alterar la planilla anterior.
 Los cálculos simulados no son válidos para pagos reales. Ver docs/caja-rrhh.md.
+=======
+Registrar y actualizar empleados, seleccionar el período de planilla y consultar
+las boletas de pago y el historial. Los cálculos de demostración no son válidos
+para pagos reales.
+>>>>>>> Stashed changes
